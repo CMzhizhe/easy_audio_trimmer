@@ -102,34 +102,40 @@ class _AudioTrimmerViewState extends State<AudioTrimmerView> {
                       ),
                       Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TrimViewer(
-                            trimmer: _trimmer,
-                            viewerHeight: 100,
-                            maxAudioLength: const Duration(seconds: 50),
-                            viewerWidth: MediaQuery.of(context).size.width,
-                            durationStyle: DurationStyle.FORMAT_MM_SS,
-                            backgroundColor: Theme.of(context).primaryColor,
-                            barColor: Colors.white,
-                            durationTextStyle: TextStyle(
-                                color: Theme.of(context).primaryColor),
-                            allowAudioSelection: true,
-                            editorProperties: TrimEditorProperties(
-                              circleSize: 10,
-                              borderPaintColor: Colors.pinkAccent,
-                              borderWidth: 4,
-                              borderRadius: 5,
-                              circlePaintColor: Colors.pink.shade400,
-                            ),
-                            areaProperties:
-                                TrimAreaProperties.edgeBlur(blurEdges: true),
-                            onChangeStart: (value) => _startValue = value,
-                            onChangeEnd: (value) => _endValue = value,
-                            onChangePlaybackState: (value) {
-                              if (mounted) {
-                                setState(() => _isPlaying = value);
-                              }
-                            },
+                          padding: EdgeInsets.only(left: 10,right: 10),
+                          child: Row(
+                            children: [
+                              Expanded(child: SingleChildScrollView(
+                                scrollDirection:Axis.horizontal,
+                                child: TrimViewer(
+                                  trimmer: _trimmer,
+                                  viewerHeight: 100,
+                                  maxAudioLength: const Duration(seconds: 50),
+                                  viewerWidth: MediaQuery.of(context).size.width * 3,
+                                  durationStyle: DurationStyle.FORMAT_MM_SS,
+                                  backgroundColor: Theme.of(context).primaryColor,
+                                  barColor: Colors.white,
+                                  durationTextStyle: TextStyle(color: Theme.of(context).primaryColor),
+                                  allowAudioSelection: true,
+                                  editorProperties: TrimEditorProperties(
+                                    circleSize: 10,
+                                    borderPaintColor: Colors.pinkAccent,
+                                    borderWidth: 4,
+                                    borderRadius: 5,
+                                    circlePaintColor: Colors.pink.shade400,
+                                  ),
+                                  areaProperties:
+                                  TrimAreaProperties.edgeBlur(blurEdges: true),
+                                  onChangeStart: (value) => _startValue = value,
+                                  onChangeEnd: (value) => _endValue = value,
+                                  onChangePlaybackState: (value) {
+                                    if (mounted) {
+                                      setState(() => _isPlaying = value);
+                                    }
+                                  },
+                                ),
+                              ))
+                            ],
                           ),
                         ),
                       ),

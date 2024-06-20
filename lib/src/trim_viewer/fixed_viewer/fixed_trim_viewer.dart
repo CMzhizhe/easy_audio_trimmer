@@ -190,6 +190,8 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
 
   bool _isAnimationControllerDispose = false;
 
+
+
   @override
   void initState() {
     super.initState();
@@ -199,8 +201,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
     _barViewerH = widget.viewerHeight;
     log('barViewerW: $_barViewerW');
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      final renderBox =
-          _trimmerAreaKey.currentContext?.findRenderObject() as RenderBox?;
+      final renderBox = _trimmerAreaKey.currentContext?.findRenderObject() as RenderBox?;
       final trimmerActualWidth = renderBox?.size.width;
       log('RENDER BOX: $trimmerActualWidth');
       if (trimmerActualWidth == null) return;
@@ -219,8 +220,8 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
           audioFile: _audioFile!,
           audioDuration: _audioDuration,
           fit: widget.areaProperties.barFit,
-          barHeight: _barViewerH,
-          barWeight: _barViewerW,
+          barHeight: _barViewerH,   //红色的框高度
+          barWeight: _barViewerW,  //红色的框宽度
           backgroundColor: widget.backgroundColor,
           barColor: widget.barColor,
         );
@@ -230,8 +231,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
           return;
         }
 
-        if (widget.maxAudioLength > const Duration(milliseconds: 0) &&
-            widget.maxAudioLength < totalDuration) {
+        if (widget.maxAudioLength > const Duration(milliseconds: 0) && widget.maxAudioLength < totalDuration) {
           if (widget.maxAudioLength < totalDuration) {
             fraction = widget.maxAudioLength.inMilliseconds /
                 totalDuration.inMilliseconds;
@@ -334,17 +334,18 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
   /// Determine which [EditorDragType] is used.
   void _onDragStart(DragStartDetails details) {
     debugPrint("_onDragStart");
-    debugPrint(details.localPosition.toString());
-    debugPrint((_startPos.dx - details.localPosition.dx).abs().toString());
-    debugPrint((_endPos.dx - details.localPosition.dx).abs().toString());
+    debugPrint("details.localPosition.toString() = ${details.localPosition.toString()}");
+    debugPrint("_startPos.dx = ${_startPos.dx},_endPos.dx = ${_endPos.dx}");
 
     final startDifference = _startPos.dx - details.localPosition.dx;
     final endDifference = _endPos.dx - details.localPosition.dx;
 
+    debugPrint("startDifference = ${startDifference}");
+    debugPrint("endDifference = ${endDifference}");
+
     // First we determine whether the dragging motion should be allowed. The allowed
     // zone is widget.sideTapSize (left) + frame (center) + widget.sideTapSize (right)
-    if (startDifference <= widget.editorProperties.sideTapSize &&
-        endDifference >= -widget.editorProperties.sideTapSize) {
+    if (startDifference <= widget.editorProperties.sideTapSize && endDifference >= -widget.editorProperties.sideTapSize) {
       _allowDrag = true;
     } else {
       debugPrint("Dragging is outside of frame, ignoring gesture...");
@@ -352,12 +353,17 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
       return;
     }
 
+
+    if(_allowDrag){
+      print("允许拖动");
+    }else{
+      print("不允许拖动");
+    }
+
     // Now we determine which part is dragged
-    if (details.localPosition.dx <=
-        _startPos.dx + widget.editorProperties.sideTapSize) {
+    if (details.localPosition.dx <= _startPos.dx + widget.editorProperties.sideTapSize) {
       _dragType = EditorDragType.left;
-    } else if (details.localPosition.dx <=
-        _endPos.dx - widget.editorProperties.sideTapSize) {
+    } else if (details.localPosition.dx <= _endPos.dx - widget.editorProperties.sideTapSize) {
       _dragType = EditorDragType.center;
     } else {
       _dragType = EditorDragType.right;
@@ -369,7 +375,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
   /// Makes sure the limits are respected.
   void _onDragUpdate(DragUpdateDetails details) {
     if (!_allowDrag) return;
-
+    print("_dragType = $_dragType");
     if (_dragType == EditorDragType.left) {
       if (!widget.allowAudioSelection) return;
       _startCircleSize = widget.editorProperties.circleSizeOnDrag;
@@ -382,8 +388,10 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
     } else if (_dragType == EditorDragType.center) {
       _startCircleSize = widget.editorProperties.circleSizeOnDrag;
       _endCircleSize = widget.editorProperties.circleSizeOnDrag;
-      if ((_startPos.dx + details.delta.dx >= 0) &&
-          (_endPos.dx + details.delta.dx <= _barViewerW)) {
+      print("_startPos.dx + details.delta.dx = ${_startPos.dx + details.delta.dx}");
+      print("_endPos.dx + details.delta.dx = ${_endPos.dx + details.delta.dx}");
+      print("_barViewerW = ${_barViewerW}");
+      if ((_startPos.dx + details.delta.dx >= 0) && (_endPos.dx + details.delta.dx <= _barViewerW)) {
         _startPos += details.delta;
         _endPos += details.delta;
         _onStartDragged();
@@ -455,7 +463,80 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        widget.showDuration
+            ? SizedBox(
+          width: _barViewerW,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.max,
+              children: <Widget>[
+                Text(
+                  Duration(milliseconds: _audioStartPos.toInt())
+                      .format(widget.durationStyle),
+                  style: widget.durationTextStyle,
+                ),
+                audioPlayerController.state == PlayerState.playing
+                    ? Text(
+                  Duration(milliseconds: _currentPosition.toInt())
+                      .format(widget.durationStyle),
+                  style: widget.durationTextStyle,
+                )
+                    : Container(),
+                Text(
+                  Duration(milliseconds: _audioEndPos.toInt())
+                      .format(widget.durationStyle),
+                  style: widget.durationTextStyle,
+                ),
+              ],
+            ),
+          ),
+        )
+            : Container(),
+        Stack(
+          children: [
+            GestureDetector(
+              onHorizontalDragStart: _onDragStart,
+              onHorizontalDragUpdate: _onDragUpdate,
+              onHorizontalDragEnd: _onDragEnd,
+              child: ClipRRect(
+                borderRadius:
+                BorderRadius.circular(widget.areaProperties.borderRadius),
+                child: Container(
+                  key: _trimmerAreaKey,
+                  color: Colors.grey[900],
+                  height: _barViewerH,
+                  width: _barViewerW == 0.0 ? widget.viewerWidth : _barViewerW,
+                  child: barWidget ?? Container(),
+                ),
+              ),
+            ),
+            CustomPaint(
+                foregroundPainter: TrimEditorPainter(
+                  startPos: _startPos,
+                  endPos: _endPos,
+                  scrubberAnimationDx: _scrubberAnimation?.value ?? 0,
+                  startCircleSize: _startCircleSize,
+                  endCircleSize: _endCircleSize,
+                  borderRadius: _borderRadius,
+                  borderWidth: widget.editorProperties.borderWidth,
+                  scrubberWidth: widget.editorProperties.scrubberWidth,
+                  circlePaintColor: widget.editorProperties.circlePaintColor,
+                  borderPaintColor: widget.editorProperties.borderPaintColor,
+                  scrubberPaintColor: widget.editorProperties.scrubberPaintColor,
+                )
+            ),
+          ],
+        ),
+
+      ],
+    );
+
+    /*return GestureDetector(
       onHorizontalDragStart: _onDragStart,
       onHorizontalDragUpdate: _onDragUpdate,
       onHorizontalDragEnd: _onDragEnd,
@@ -521,6 +602,6 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
           ),
         ],
       ),
-    );
+    );*/
   }
 }
