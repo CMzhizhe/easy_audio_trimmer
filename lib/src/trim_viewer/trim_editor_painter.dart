@@ -146,8 +146,7 @@ class TrimEditorPainter extends CustomPainter {
     if (showScrubber) {
       if (scrubberAnimationDx.toInt() > startPos.dx.toInt()) {
         canvas.drawLine(
-          Offset(scrubberAnimationDx, 0),
-          Offset(scrubberAnimationDx, 0) + Offset(0, endPos.dy),
+          Offset(scrubberAnimationDx, 0), Offset(scrubberAnimationDx, 0) + Offset(0, endPos.dy),
           scrubberPaint,
         );
       }

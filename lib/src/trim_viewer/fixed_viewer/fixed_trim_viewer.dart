@@ -149,8 +149,8 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
   double _audioStartPos = 0.0;
   double _audioEndPos = 0.0;
 
-  Offset _startPos = const Offset(0, 0);
-  Offset _endPos = const Offset(0, 0);
+  Offset _startPos =  const Offset(0, 0);
+  Offset _endPos =  const Offset(0, 0);
 
   double _startFraction = 0.0;
   double _endFraction = 1.0;
@@ -208,7 +208,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
       _barViewerW = trimmerActualWidth;
       _initializeAudioController();
       audioPlayerController.seek(const Duration(milliseconds: 0));
-      _numberOfBars = trimmerActualWidth ~/ _barViewerH;
+      _numberOfBars = trimmerActualWidth ~/ _barViewerH;   // ~/ 整除
       log('numberOfBars: $_numberOfBars');
       log('barViewerW: $_barViewerW');
       Duration? totalDuration = await audioPlayerController.getDuration();
@@ -320,9 +320,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
           });
         }
       });
-      // audioPlayerController.addListener(() async {
 
-      // });
 
       audioPlayerController.setVolume(1.0);
       _audioDuration =
@@ -332,13 +330,13 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
 
   /// Called when the user starts dragging the frame, on either side on the whole frame.
   /// Determine which [EditorDragType] is used.
-  void _onDragStart(DragStartDetails details) {
+  void _onDragStart(Offset details) {
     debugPrint("_onDragStart");
-    debugPrint("details.localPosition.toString() = ${details.localPosition.toString()}");
+    debugPrint("details.localPosition.toString() = ${details.toString()}");
     debugPrint("_startPos.dx = ${_startPos.dx},_endPos.dx = ${_endPos.dx}");
 
-    final startDifference = _startPos.dx - details.localPosition.dx;
-    final endDifference = _endPos.dx - details.localPosition.dx;
+    final startDifference = _startPos.dx - details.dx;
+    final endDifference = _endPos.dx - details.dx;
 
     debugPrint("startDifference = ${startDifference}");
     debugPrint("endDifference = ${endDifference}");
@@ -350,7 +348,6 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
     } else {
       debugPrint("Dragging is outside of frame, ignoring gesture...");
       _allowDrag = false;
-      return;
     }
 
 
@@ -361,49 +358,50 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
     }
 
     // Now we determine which part is dragged
-    if (details.localPosition.dx <= _startPos.dx + widget.editorProperties.sideTapSize) {
+    if (details.dx <= _startPos.dx + widget.editorProperties.sideTapSize) {
       _dragType = EditorDragType.left;
-    } else if (details.localPosition.dx <= _endPos.dx - widget.editorProperties.sideTapSize) {
+    } else if (details.dx <= _endPos.dx - widget.editorProperties.sideTapSize) {
       _dragType = EditorDragType.center;
     } else {
       _dragType = EditorDragType.right;
     }
+
   }
 
   /// Called during dragging, only executed if [_allowDrag] was set to true in
   /// [_onDragStart].
   /// Makes sure the limits are respected.
-  void _onDragUpdate(DragUpdateDetails details) {
+  void _onDragUpdate(Offset details) {
     if (!_allowDrag) return;
     print("_dragType = $_dragType");
     if (_dragType == EditorDragType.left) {
       if (!widget.allowAudioSelection) return;
       _startCircleSize = widget.editorProperties.circleSizeOnDrag;
-      if ((_startPos.dx + details.delta.dx >= 0) &&
-          (_startPos.dx + details.delta.dx <= _endPos.dx) &&
-          !(_endPos.dx - _startPos.dx - details.delta.dx > maxLengthPixels!)) {
-        _startPos += details.delta;
+      if ((_startPos.dx + details.dx >= 0) &&
+          (_startPos.dx + details.dx <= _endPos.dx) &&
+          !(_endPos.dx - _startPos.dx - details.dx > maxLengthPixels!)) {
+        _startPos = Offset(_startPos.dx + details.dx, _startPos.dy) ;
         _onStartDragged();
       }
     } else if (_dragType == EditorDragType.center) {
       _startCircleSize = widget.editorProperties.circleSizeOnDrag;
       _endCircleSize = widget.editorProperties.circleSizeOnDrag;
-      print("_startPos.dx + details.delta.dx = ${_startPos.dx + details.delta.dx}");
-      print("_endPos.dx + details.delta.dx = ${_endPos.dx + details.delta.dx}");
+      print("_startPos.dx + details.delta.dx = ${_startPos.dx + details.dx}");
+      print("_endPos.dx + details.delta.dx = ${_endPos.dx + details.dx}");
       print("_barViewerW = ${_barViewerW}");
-      if ((_startPos.dx + details.delta.dx >= 0) && (_endPos.dx + details.delta.dx <= _barViewerW)) {
-        _startPos += details.delta;
-        _endPos += details.delta;
+      if ((_startPos.dx + details.dx >= 0) && (_endPos.dx + details.dx <= _barViewerW)) {
+        _startPos = Offset(_startPos.dx + details.dx, _startPos.dy) ;
+        _endPos = Offset(_endPos.dx + details.dx, _endPos.dy);
         _onStartDragged();
         _onEndDragged();
       }
     } else {
       if (!widget.allowAudioSelection) return;
       _endCircleSize = widget.editorProperties.circleSizeOnDrag;
-      if ((_endPos.dx + details.delta.dx <= _barViewerW) &&
-          (_endPos.dx + details.delta.dx >= _startPos.dx) &&
-          !(_endPos.dx - _startPos.dx + details.delta.dx > maxLengthPixels!)) {
-        _endPos += details.delta;
+      if ((_endPos.dx + details.dx <= _barViewerW) &&
+          (_endPos.dx + details.dx >= _startPos.dx) &&
+          !(_endPos.dx - _startPos.dx + details.dx > maxLengthPixels!)) {
+        _endPos = Offset(_endPos.dx + details.dx, _endPos.dy);
         _onEndDragged();
       }
     }
@@ -431,7 +429,7 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
   }
 
   /// Drag gesture ended, update UI accordingly.
-  void _onDragEnd(DragEndDetails details) {
+  void _onDragEnd() {
     setState(() {
       _startCircleSize = widget.editorProperties.circleSize;
       _endCircleSize = widget.editorProperties.circleSize;
@@ -463,46 +461,75 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        widget.showDuration
-            ? SizedBox(
-          width: _barViewerW,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              mainAxisSize: MainAxisSize.max,
-              children: <Widget>[
-                Text(
-                  Duration(milliseconds: _audioStartPos.toInt())
-                      .format(widget.durationStyle),
-                  style: widget.durationTextStyle,
+    return Listener(
+      onPointerDown: (PointerDownEvent event){
+        print("onPointerDown - > event.localDelta = ${event.localDelta.toString()}");  //event.localDelta  它描述了手指相对于 Widget 内部坐标系的移动距离
+        print("onPointerDown - > event.delta = ${event.delta.toString()}");
+        print("onPointerDown - > event.position = ${event.position.toString()}");//屏幕为中心
+        _onDragStart(event.position);
+      },
+      onPointerMove: (PointerMoveEvent event){
+        print("onPointerMove - > event.localDelta = ${event.localDelta.toString()}");
+        print("onPointerMove - > event.delta = ${event.delta.toString()}");  //用于表示上一次事件到当前事件之间的移动距离
+        print("onPointerMove - > event.position = ${event.position.toString()}");
+        _onDragUpdate(event.delta);
+      },
+      onPointerUp:(PointerUpEvent event){
+        print("onPointerUp - > event.localDelta = ${event.localDelta.toString()}");
+        print("onPointerUp - > event.delta = ${event.delta.toString()}");
+        print("onPointerUp - > event.position = ${event.position.toString()}");
+        _onDragEnd();
+      },
+      child: AbsorbPointer(
+        absorbing: _allowDrag,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            widget.showDuration
+                ? SizedBox(
+              width: _barViewerW,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.max,
+                  children: <Widget>[
+                    Text(
+                      Duration(milliseconds: _audioStartPos.toInt())
+                          .format(widget.durationStyle),
+                      style: widget.durationTextStyle,
+                    ),
+                    audioPlayerController.state == PlayerState.playing
+                        ? Text(
+                      Duration(milliseconds: _currentPosition.toInt())
+                          .format(widget.durationStyle),
+                      style: widget.durationTextStyle,
+                    )
+                        : Container(),
+                    Text(
+                      Duration(milliseconds: _audioEndPos.toInt())
+                          .format(widget.durationStyle),
+                      style: widget.durationTextStyle,
+                    ),
+                  ],
                 ),
-                audioPlayerController.state == PlayerState.playing
-                    ? Text(
-                  Duration(milliseconds: _currentPosition.toInt())
-                      .format(widget.durationStyle),
-                  style: widget.durationTextStyle,
-                )
-                    : Container(),
-                Text(
-                  Duration(milliseconds: _audioEndPos.toInt())
-                      .format(widget.durationStyle),
-                  style: widget.durationTextStyle,
-                ),
-              ],
-            ),
-          ),
-        )
-            : Container(),
-        Stack(
-          children: [
-            GestureDetector(
-              onHorizontalDragStart: _onDragStart,
-              onHorizontalDragUpdate: _onDragUpdate,
-              onHorizontalDragEnd: _onDragEnd,
+              ),
+            )
+                : Container(),
+            CustomPaint(
+              foregroundPainter: TrimEditorPainter(
+                startPos: _startPos,
+                endPos: _endPos,
+                scrubberAnimationDx: _scrubberAnimation?.value ?? 0,
+                startCircleSize: _startCircleSize,
+                endCircleSize: _endCircleSize,
+                borderRadius: _borderRadius,
+                borderWidth: widget.editorProperties.borderWidth,
+                scrubberWidth: widget.editorProperties.scrubberWidth,
+                circlePaintColor: widget.editorProperties.circlePaintColor,
+                borderPaintColor: widget.editorProperties.borderPaintColor,
+                scrubberPaintColor: widget.editorProperties.scrubberPaintColor,
+              ),
               child: ClipRRect(
                 borderRadius:
                 BorderRadius.circular(widget.areaProperties.borderRadius),
@@ -515,93 +542,9 @@ class _FixedTrimViewerState extends State<FixedTrimViewer>
                 ),
               ),
             ),
-            CustomPaint(
-                foregroundPainter: TrimEditorPainter(
-                  startPos: _startPos,
-                  endPos: _endPos,
-                  scrubberAnimationDx: _scrubberAnimation?.value ?? 0,
-                  startCircleSize: _startCircleSize,
-                  endCircleSize: _endCircleSize,
-                  borderRadius: _borderRadius,
-                  borderWidth: widget.editorProperties.borderWidth,
-                  scrubberWidth: widget.editorProperties.scrubberWidth,
-                  circlePaintColor: widget.editorProperties.circlePaintColor,
-                  borderPaintColor: widget.editorProperties.borderPaintColor,
-                  scrubberPaintColor: widget.editorProperties.scrubberPaintColor,
-                )
-            ),
           ],
         ),
-
-      ],
-    );
-
-    /*return GestureDetector(
-      onHorizontalDragStart: _onDragStart,
-      onHorizontalDragUpdate: _onDragUpdate,
-      onHorizontalDragEnd: _onDragEnd,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          widget.showDuration
-              ? SizedBox(
-                  width: _barViewerW,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      mainAxisSize: MainAxisSize.max,
-                      children: <Widget>[
-                        Text(
-                          Duration(milliseconds: _audioStartPos.toInt())
-                              .format(widget.durationStyle),
-                          style: widget.durationTextStyle,
-                        ),
-                        audioPlayerController.state == PlayerState.playing
-                            ? Text(
-                                Duration(milliseconds: _currentPosition.toInt())
-                                    .format(widget.durationStyle),
-                                style: widget.durationTextStyle,
-                              )
-                            : Container(),
-                        Text(
-                          Duration(milliseconds: _audioEndPos.toInt())
-                              .format(widget.durationStyle),
-                          style: widget.durationTextStyle,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Container(),
-          CustomPaint(
-            foregroundPainter: TrimEditorPainter(
-              startPos: _startPos,
-              endPos: _endPos,
-              scrubberAnimationDx: _scrubberAnimation?.value ?? 0,
-              startCircleSize: _startCircleSize,
-              endCircleSize: _endCircleSize,
-              borderRadius: _borderRadius,
-              borderWidth: widget.editorProperties.borderWidth,
-              scrubberWidth: widget.editorProperties.scrubberWidth,
-              circlePaintColor: widget.editorProperties.circlePaintColor,
-              borderPaintColor: widget.editorProperties.borderPaintColor,
-              scrubberPaintColor: widget.editorProperties.scrubberPaintColor,
-            ),
-            child: ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(widget.areaProperties.borderRadius),
-              child: Container(
-                key: _trimmerAreaKey,
-                color: Colors.grey[900],
-                height: _barViewerH,
-                width: _barViewerW == 0.0 ? widget.viewerWidth : _barViewerW,
-                child: barWidget ?? Container(),
-              ),
-            ),
-          ),
-        ],
       ),
-    );*/
+    );
   }
 }
